@@ -1,0 +1,12 @@
+[workspace]
+resolver = "2"
+members =  [
+  "tutorial1_window",
+  "tutorial2_surface",
+]
+
+[workspace.dependencies]
+env_logger = "0.10.0"
+log = "0.4.20"
+wgpu = "0.18.0"
+winit = "0.29.3"
