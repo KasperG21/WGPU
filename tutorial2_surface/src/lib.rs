@@ -1,3 +1,4 @@
+use wgpu::Color;
 use winit::{
     dpi::PhysicalSize,
     event::{Event, KeyEvent, WindowEvent},
@@ -67,6 +68,7 @@ struct State {
     queue: wgpu::Queue,
     config: wgpu::SurfaceConfiguration,
     size: winit::dpi::PhysicalSize<u32>,
+    clear_color: Color,
     // always place the window after the surface: memory issues
     window: winit::window::Window,
 }
@@ -133,6 +135,12 @@ impl State {
             queue,
             config,
             size,
+            clear_color: Color {
+                r: 0.,
+                g: 1.,
+                b: 0.75,
+                a: 1.,
+            },
         }
     }
 
@@ -150,8 +158,20 @@ impl State {
         }
     }
 
-    fn input(&mut self, _event: &WindowEvent) -> bool {
-        false
+    fn input(&mut self, event: &WindowEvent) -> bool {
+        match event {
+            WindowEvent::CursorMoved { position, .. } => {
+                self.clear_color = Color {
+                    r: 0.,
+                    g: position.x / self.size.width as f64,
+                    b: position.y / self.size.height as f64,
+                    a: 1.,
+                };
+
+                true
+            }
+            _ => false,
+        }
     }
 
     fn update(&mut self) {}
@@ -174,12 +194,7 @@ impl State {
                 view: &view,
                 resolve_target: None,
                 ops: wgpu::Operations {
-                    load: wgpu::LoadOp::Clear(wgpu::Color {
-                        r: 0.,
-                        g: 1.,
-                        b: 0.5,
-                        a: 1.,
-                    }),
+                    load: wgpu::LoadOp::Clear(self.clear_color),
                     store: wgpu::StoreOp::Store,
                 },
             })],

@@ -1,7 +1,6 @@
 [workspace]
 resolver = "2"
 members =  [
-  "implement",
   "tutorial1_window",
   "tutorial2_surface",
 ]
