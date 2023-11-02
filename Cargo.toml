@@ -10,5 +10,5 @@ members =  [
 env_logger = "0.10.0"
 log = "0.4.20"
 wgpu = "0.18.0"
-winit = { version = "0.29.3", features = ["rwh_05"] }
 pollster = "0.3.0"
+winit = { version = "0.29.3", features = ["rwh_05"] }

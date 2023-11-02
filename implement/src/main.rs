@@ -6,7 +6,7 @@ fn main() {
     let result = block_on(run());
 
     match result {
-        Ok(_) => println!("App ran successfully."),
-        Err(_) => println!("Error while running."),
+        Ok(_) => println!("\n\nApp ran successfully."),
+        Err(_) => println!("\n\nError while running."),
     }
 }

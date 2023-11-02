@@ -1,26 +1,61 @@
-use winit::{event::{Event, KeyEvent, WindowEvent},
+use winit::{
+    dpi::PhysicalSize,
+    event::{Event, KeyEvent, WindowEvent},
     event_loop::EventLoop,
+    keyboard::{KeyCode, PhysicalKey},
     window::WindowBuilder,
-    keyboard::{KeyCode, PhysicalKey}};
+};
 
 pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
-    let mut event_loop = EventLoop::new()?;
-    let window = WindowBuilder::new().build(&event_loop)?;
+    let event_loop = EventLoop::new()?;
+    let window = WindowBuilder::new()
+        .with_title("Tutorial 2: Surface")
+        .build(&event_loop)?;
+
+    let mut state = State::new(window).await;
 
     event_loop.run(move |event, elwt| {
         match event {
-            Event::WindowEvent { event, .. } => {
-                match event {
-                    WindowEvent::CloseRequested
-                     | WindowEvent::KeyboardInput {
-                        event: KeyEvent { physical_key: PhysicalKey::Code(KeyCode::Escape), .. },
-                        .. }
-                        => { elwt.exit(); },
-                        _ => ()
+            Event::WindowEvent { event, .. } if !state.input(&event) => match event {
+                WindowEvent::CloseRequested
+                | WindowEvent::KeyboardInput {
+                    event:
+                        KeyEvent {
+                            physical_key: PhysicalKey::Code(KeyCode::Escape),
+                            ..
+                        },
+                    ..
+                } => {
+                    elwt.exit();
+                }
+                WindowEvent::Resized(physical_size) => state.resize(physical_size),
+                WindowEvent::ScaleFactorChanged {
+                    scale_factor,
+                    mut inner_size_writer,
+                } => {
+                    let new_width = (state.size.width as f64 * scale_factor) as u32;
+                    let new_height = (state.size.height as f64 * scale_factor) as u32;
+                    let new_size = PhysicalSize::new(new_width, new_height);
+
+                    inner_size_writer.request_inner_size(new_size).unwrap();
+                }
+                WindowEvent::RedrawRequested => {
+                    state.update();
+
+                    match state.render() {
+                        Ok(_) => (),
+                        Err(wgpu::SurfaceError::Lost) => state.resize(state.size),
+                        Err(wgpu::SurfaceError::OutOfMemory) => elwt.exit(),
+                        Err(e) => eprintln!("{:?}", e),
                     }
-                }     
-                _ => ()
-            }
+                }
+                _ => (),
+            },
+            _ => (),
+        }
+
+        state.update();
+        state.window().request_redraw();
     })?;
 
     Ok(())
@@ -115,15 +150,48 @@ impl State {
         }
     }
 
-    fn input(&mut self, event: &WindowEvent) -> bool {
-        todo!();
+    fn input(&mut self, _event: &WindowEvent) -> bool {
+        false
     }
 
-    fn update(&mut self) {
-        todo!();
-    }
+    fn update(&mut self) {}
 
     fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
-        todo!();
+        let output = self.surface.get_current_texture()?;
+        let view = output.texture.create_view(&wgpu::TextureViewDescriptor {
+            ..Default::default()
+        });
+
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("Render Encoder"),
+            });
+
+        let render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            label: Some("Render pass"),
+            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                view: &view,
+                resolve_target: None,
+                ops: wgpu::Operations {
+                    load: wgpu::LoadOp::Clear(wgpu::Color {
+                        r: 0.,
+                        g: 1.,
+                        b: 0.5,
+                        a: 1.,
+                    }),
+                    store: wgpu::StoreOp::Store,
+                },
+            })],
+            depth_stencil_attachment: None,
+            ..Default::default()
+        });
+
+        drop(render_pass);
+
+        self.queue.submit(std::iter::once(encoder.finish()));
+        output.present();
+
+        Ok(())
     }
 }
